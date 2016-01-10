@@ -8,7 +8,7 @@
 	<style>
 		.container {
 			position:relative;
-			height: 300px;
+			height: 320px;
 			width: 300px;
 		}
 		.tile {
@@ -69,25 +69,33 @@ var Board = React.createClass({
 	getInitialState: function() {
     	return {count : this.props.count};
     },
-
-	isSnake: function(x, y){
-		for(var i = 0; i < this.snakeBites.length; i++) {
-			if (this.snakeBites[i].x === x && this.snakeBites[i].y === y){
+	isInList: function(x, y, items) {
+		for(var i = 0; i < items.length; i++) {
+			if (items[i].x === x && items[i].y === y){
 				return true;
 			}
 		}
 		return false;
 	},
+	isSnake: function(x, y){
+		return this.isInList(x, y, this.snakeBites);
+	},
 	snakeDied: function() {
 		var head = this.snakeBites[0];
+		var died;
 		if (this.snakeBites.length === this.props.width*this.props.height) {
-			return false;
+			died = true;
+		} 
+		else if (head.x < 0 || head.y < 0 || head.x >= this.props.width || head.y >= this.props.height ) {
+			died = true;
+		} 
+		else if (this.isInList(head.x, head.y, this.snakeBites.slice(1))) {
+			died = true;
+		} 
+		else {
+			died = false;
 		}
-		else if (head.x >= 0 && head.y >= 0 && head.x < this.props.width && head.y < this.props.height ) {
-			return false;
-		} else {
-			return true;
-		}
+		return died;
 	},
 	getRandomPosForApple :function() {
 	    var x, y;
@@ -207,22 +215,27 @@ var GameWrapper = React.createClass({
 			//console.log(e.keyCode);
 		}
    },
-   componentDidMount: function() {
+   componentDidMount: function(){
+	   window.addEventListener("keyup", this.dealWithKeyboard, false);
+	   this.startGame();
+   },
+   startGame: function() {
  	
-      window.addEventListener("keyup", this.dealWithKeyboard, false);
- 
       this.Game.fps = 1;
-
+	  
       this.Game.run = (function() {
         this.setState({count : this.state.count + 1, dir : this.state.dir});
       }).bind(this);
+
 
       // Start the game loop
 	  this.Game._intervalId = setInterval(this.Game.run, 1000 / this.Game.fps);
 
    },
    render : function(){
-   		return <Board gameEnded={this.endGame} levelUp={this.levelUp} count={this.state.count} dir={this.state.dir} width={10} height={10}/>
+   		return (<div>
+			<Board gameEnded={this.endGame} levelUp={this.levelUp} count={this.state.count} dir={this.state.dir} width={10} height={10}/>
+		</div>)
    }
 });
 

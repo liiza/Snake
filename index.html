@@ -1,0 +1,239 @@
+<html>
+<head>
+    <script src="react/react.js"></script>
+    <script src="react/react-dom.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.23/browser.min.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+
+	<style>
+		.container {
+			position:relative;
+			height: 300px;
+			width: 300px;
+		}
+		.tile {
+			width: 20px;
+			height: 20px;
+			margin: 5px;
+			position: absolute;
+
+		}
+		.snake {
+			background-color: green;
+		}
+		.apple {
+			background-color: red;
+		}
+		.empty {
+			background-color: gray;
+		}
+	</style>
+</head>
+
+<body>
+<script  type="text/babel">
+var Points = React.createClass({
+	getInitialState: function(){
+		return {points: 0}
+	},
+	componentWillReceiveProps: function(nextProps) {
+		this.setState({points: nextProps.points});
+	},
+	render: function(){
+		return (<div>Points: {this.state.points}</div>);
+	}
+});
+
+var Tile = React.createClass({
+	render: function() {
+		var divStyle = {left: this.props.x*25, bottom: this.props.y*25};
+		
+		if (this.props.state === 1) {
+			return (<div className="tile snake" style={divStyle} />);
+		} else if (this.props.state === 2) {
+			return (<div className="tile apple" style={divStyle} />);	
+		} else {
+			return (<div className="tile empty" style={divStyle} />);
+		}
+	}
+});
+
+var Board = React.createClass({
+    up : 1, right : 2, down: 3, left : 4,
+	
+	points : 0,
+	snakeBites : [{x : 5, y : 5}],	
+	applePos : {x: 3, y:3},
+	currentDir : 1,
+	
+	getInitialState: function() {
+    	return {count : this.props.count};
+    },
+
+	isSnake: function(x, y){
+		for(var i = 0; i < this.snakeBites.length; i++) {
+			if (this.snakeBites[i].x === x && this.snakeBites[i].y === y){
+				return true;
+			}
+		}
+		return false;
+	},
+	snakeDied: function() {
+		var head = this.snakeBites[0];
+		if (this.snakeBites.length === this.props.width*this.props.height) {
+			return false;
+		}
+		else if (head.x >= 0 && head.y >= 0 && head.x < this.props.width && head.y < this.props.height ) {
+			return false;
+		} else {
+			return true;
+		}
+	},
+	getRandomPosForApple :function() {
+	    var x, y;
+		do{
+			x = Math.floor((Math.random() * this.props.width));
+			y = Math.floor((Math.random() * this.props.height));
+		} while(this.isSnake(x, y))
+		return {x, y};
+	},
+	
+	moveSnake : function() {
+		var head = this.snakeBites[0];
+		
+		switch(this.currentDir) {
+			case this.up:
+				this.snakeBites.splice(0, 0, {x: head.x, y:head.y + 1});
+				break;
+			case this.right:
+				this.snakeBites.splice(0, 0, {x: head.x + 1, y:head.y});
+				break;
+			case this.down:
+				this.snakeBites.splice(0, 0, {x: head.x, y:head.y - 1});
+				break;
+			case this.left:
+				this.snakeBites.splice(0, 0, {x: head.x - 1, y:head.y});
+				break;
+			default:
+				////console.log("Error invalid dir set.");
+		}
+		//console.log("Moving snake to " + this.snakeBites[this.snakeBites.length - 1].x + " " + this.snakeBites[0].y);
+		this.snakeBites.splice(this.snakeBites.length - 1, 1);
+	},
+	ateApple : function() {
+		var head = this.snakeBites[0];
+		if (head.x === this.applePos.x && head.y === this.applePos.y) {
+			return true;
+		} else {
+			return false;
+		}
+	},
+
+    componentWillReceiveProps(nextProps) {
+        this.setState({count : nextProps.count});
+		this.currentDir = nextProps.dir;
+		this.moveSnake();
+		
+		if (this.snakeDied()) {
+			//console.log("Game over");
+			this.points = this.points + " Game over !!! ";
+			this.props.gameEnded();
+		
+			
+		}
+		if (this.ateApple()) {
+			this.points += 100;
+			if (this.points%300 === 0) {
+				this.props.levelUp();
+			}
+			
+			var copy = this.snakeBites[this.snakeBites.length - 1];
+			this.snakeBites.push(copy);
+			
+			this.applePos = this.getRandomPosForApple();
+		}
+		
+    },
+    render: function() {
+	    var tiles = [];
+	    for (var i = 0; i < this.props.width; i++) {
+			for (var j = 0; j < this.props.height; j++) {
+				if (this.isSnake(i ,j)) {
+					tiles.push({x: i, y: j, state: 1});
+					//console.log("is snake");
+				} else if (this.applePos.x === i && this.applePos.y === j) {
+					tiles.push({x: i, y: j, state: 2});
+				} else {
+					tiles.push({x: i, y: j, state: 0});
+				}
+			}
+		}
+		var tilesJSX = tiles.map(function(tile){
+			return <Tile key={tile.x+" "+tile.y} state={tile.state} x={tile.x} y={tile.y} />;
+		});
+        return (
+		<div>
+			<div>W=up, S=right, Z=down, A=left</div>
+			<Points points={this.points}/>
+			<div>{tilesJSX}</div>
+		</div>
+		)
+	}
+});
+
+var GameWrapper = React.createClass({
+	
+   keys : {87 : 1, 83 : 2, 90: 3, 65: 4},
+
+   Game : {},
+   
+   getInitialState: function() {
+   	   return {count: 1, dir: 1};
+   },
+   endGame : function(){
+		clearInterval(this.Game._intervalId);
+   },
+   levelUp: function() {
+		clearInterval(this.Game._intervalId);
+		this.Game.fps +=1;
+		this.Game._intervalId = setInterval(this.Game.run, 1000 / this.Game.fps);
+   },
+   dealWithKeyboard(e){
+		for (var key in this.keys) {
+			if (key == e.keyCode) {
+				this.setState({count: this.state.count, dir :this.keys[key]});
+				//console.log("changing dir");
+			}
+			//console.log(e.keyCode);
+		}
+   },
+   componentDidMount: function() {
+ 	
+      window.addEventListener("keyup", this.dealWithKeyboard, false);
+ 
+      this.Game.fps = 1;
+
+      this.Game.run = (function() {
+        this.setState({count : this.state.count + 1, dir : this.state.dir});
+      }).bind(this);
+
+      // Start the game loop
+	  this.Game._intervalId = setInterval(this.Game.run, 1000 / this.Game.fps);
+
+   },
+   render : function(){
+   		return <Board gameEnded={this.endGame} levelUp={this.levelUp} count={this.state.count} dir={this.state.dir} width={10} height={10}/>
+   }
+});
+
+ReactDOM.render(
+	<GameWrapper/>,
+    document.getElementById('container')
+);
+
+</script>
+<div id="container" class="container">
+    <!-- This element's contents will be replaced with your component. -->
+</div>
+</body>
+</html>

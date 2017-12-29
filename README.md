@@ -1,4 +1,3 @@
 # Snake
 
-
-https://jsfiddle.net/liiza/qte5scu3/
+https://s3-us-west-1.amazonaws.com/maze-demo/snake/snake.html
